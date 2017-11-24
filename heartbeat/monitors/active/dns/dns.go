@@ -1,13 +1,13 @@
 package dns
 
 import (
+	"github.com/elastic/beats/heartbeat/monitors"
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/libbeat/logp"
-	"github.com/elastic/beats/heartbeat/monitors"
-        "github.com/miekg/dns"
+	"github.com/miekg/dns"
 	"net"
 	"strings"
-//	"fmt"
+	//	"fmt"
 )
 
 func init() {
@@ -27,63 +27,62 @@ func create(
 
 	var err error
 
-	jobs := make([]monitors.Job, len(config.Questions) * len(config.NameServers))
+	jobs := make([]monitors.Job, len(config.Questions)*len(config.NameServers))
 
 	var (
-	    index int
-	    qtype uint16
-	    isv6  bool
-        )
+		index int
+		qtype uint16
+		isv6  bool
+	)
 
 	for _, nameserver := range config.NameServers {
 
-	    host, port, port_err := net.SplitHostPort(nameserver)
-//	    fmt.Printf("host[%v] port[%v] port_err[%v]\n", host, port, port_err)
+		host, port, port_err := net.SplitHostPort(nameserver)
+		//	    fmt.Printf("host[%v] port[%v] port_err[%v]\n", host, port, port_err)
 
-            if port_err != nil {
-               host = nameserver
-	       if strings.Contains(host, ":") {	       
-                   isv6 = true
-                   nameserver = "[" + nameserver + "]:53"
-	       }else{
-                   nameserver += ":53"
-                   isv6 = false
-	       }
-               port = "53"
+		if port_err != nil {
+			host = nameserver
+			if strings.Contains(host, ":") {
+				isv6 = true
+				nameserver = "[" + nameserver + "]:53"
+			} else {
+				nameserver += ":53"
+				isv6 = false
+			}
+			port = "53"
 
-            }else{
-	       if strings.Contains(host, ":") {
-	           isv6 = true
-	       }else{
-	           isv6 = false
-	       }
-	    }
-
-//	    fmt.Printf("nameserver[%v] host[%v] port[%v]\n", nameserver, host, port)
-	    for _, question := range config.Questions {
-
-	    	query, qtypestr, qtype_err := net.SplitHostPort(question)
-
-            	if qtype_err != nil {
-               	    query = question
-               	    qtype = dns.TypeA
-
-            	}else{
-		    if k, ok := dns.StringToType[strings.ToUpper(qtypestr)]; ok {
-		       qtype = k
-		    }else{
-		       qtype = dns.TypeA
-		    }
+		} else {
+			if strings.Contains(host, ":") {
+				isv6 = true
+			} else {
+				isv6 = false
+			}
 		}
-	    	jobs[index], err = newDNSMonitorHostJob(nameserver, host, port, isv6, query, qtype, &config)
 
-	    	if err != nil {
-	               return nil, err
-	    	}
-		index++
-            }
-        }
+		//	    fmt.Printf("nameserver[%v] host[%v] port[%v]\n", nameserver, host, port)
+		for _, question := range config.Questions {
+
+			query, qtypestr, qtype_err := net.SplitHostPort(question)
+
+			if qtype_err != nil {
+				query = question
+				qtype = dns.TypeA
+
+			} else {
+				if k, ok := dns.StringToType[strings.ToUpper(qtypestr)]; ok {
+					qtype = k
+				} else {
+					qtype = dns.TypeA
+				}
+			}
+			jobs[index], err = newDNSMonitorHostJob(nameserver, host, port, isv6, query, qtype, &config)
+
+			if err != nil {
+				return nil, err
+			}
+			index++
+		}
+	}
 
 	return jobs, nil
 }
-
