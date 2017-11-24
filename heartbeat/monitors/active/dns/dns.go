@@ -43,11 +43,11 @@ func create(
             if port_err != nil {
                host = nameserver
 	       if strings.Contains(host, ":") {	       
-	       	   isv6 = true
-               	   nameserver = "[" + nameserver + "]:53"
+                   isv6 = true
+                   nameserver = "[" + nameserver + "]:53"
 	       }else{
-               	   nameserver += ":53"
-	           isv6 = false
+                   nameserver += ":53"
+                   isv6 = false
 	       }
                port = "53"
 
