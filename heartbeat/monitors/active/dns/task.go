@@ -7,24 +7,34 @@ import (
 	"github.com/elastic/beats/libbeat/common"
 	"github.com/elastic/beats/heartbeat/monitors"
 	"github.com/elastic/beats/heartbeat/reason"
-	"net"
 )
 
 func newDNSMonitorHostJob(
         nameserver string,
+	host string,
+	port string,
+	isv6 bool,
 	question string,
+	qtype uint16,
 	config *Config,
 ) (monitors.Job, error) {
 	typ := config.Name
-	jobName := fmt.Sprintf("%v@%v@%v", typ, question, nameserver)
+	qtypestr := dns.TypeToString[qtype]
 
+	jobName := fmt.Sprintf("%v@%v@%v@%v", typ, question, qtypestr, nameserver)
+
+	fmt.Printf("newDNSMonitorHostJob: nameserver[%v] host[%v] port[%v] question[%v] qtype[%v]\n", nameserver, host, port, question, qtype)
+	
 	fields := common.MapStr{
 		"nameserver":  nameserver,
 		"question": question,
+  	        "dst_host": host,
+		"qtype": qtypestr,
+	        "port": port,
 	}
 
 	return monitors.MakeSimpleJob(jobName, typ, func() (common.MapStr, error) {
-		event, err := execQuery(nameserver, question)
+		event, err := execQuery(nameserver, isv6, question, qtype)
 		if event == nil {
 			event = common.MapStr{}
 		}
@@ -33,22 +43,26 @@ func newDNSMonitorHostJob(
 	}), nil
 }
 
-func execQuery(nameserver string, question string)(common.MapStr, reason.Reason){
+func execQuery(nameserver string, isv6 bool, question string, qtype uint16)(common.MapStr, reason.Reason){
+     fmt.Printf("beginning: in:nameserver[%v] question[%v] type[%v]\n", nameserver, question, qtype)
+     dns_msg := new(dns.Msg)
+     dns_msg.Id = dns.Id()
+     dns_msg.RecursionDesired = true
+     dns_msg.Question = make([]dns.Question, 1)
 
-     host, port, port_err := net.SplitHostPort(nameserver)
+     dns_msg.Question[0] = dns.Question{dns.Fqdn(question), qtype, dns.ClassINET}
+     dns_client := new(dns.Client)
 
-     if port_err != nil {
-     	nameserver += ":53"
-	port = "53" 
+     if isv6 {
+         dns_client.Net = "udp6"
      }
 
-     m1 := new(dns.Msg)
-     m1.Id = dns.Id()
-     m1.RecursionDesired = true
-     m1.Question = make([]dns.Question, 1)
-     m1.Question[0] = dns.Question{question, dns.TypeANY, dns.ClassINET}
-     c := new(dns.Client)
-     in, rtt, err := c.Exchange(m1, nameserver)
+     in, rtt, err := dns_client.Exchange(dns_msg, nameserver)
+
+     fmt.Printf("nameserver:[%v]\n", nameserver)
+     fmt.Printf("in:[%v]\n", in)
+     fmt.Printf("rtt:[%v]\n", rtt)
+     fmt.Printf("err:[%v]\n\n", err)
 
      event := common.MapStr{
      	      "response": common.MapStr{
@@ -57,8 +71,6 @@ func execQuery(nameserver string, question string)(common.MapStr, reason.Reason)
 	      "nameserver": nameserver,
 	      "question": question,
 	      "rtt":  rtt,
-	      "dst_host": host,
-	      "port": port,
      }
 
      if len(in.Answer) == 0 {
