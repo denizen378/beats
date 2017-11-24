@@ -7,7 +7,7 @@ import (
         "github.com/miekg/dns"
 	"net"
 	"strings"
-	"fmt"
+//	"fmt"
 )
 
 func init() {
@@ -38,26 +38,28 @@ func create(
 	for _, nameserver := range config.NameServers {
 
 	    host, port, port_err := net.SplitHostPort(nameserver)
+//	    fmt.Printf("host[%v] port[%v] port_err[%v]\n", host, port, port_err)
 
             if port_err != nil {
                host = nameserver
-               nameserver += ":53"
+	       if strings.Contains(host, ":") {	       
+	       	   isv6 = true
+               	   nameserver = "[" + nameserver + "]:53"
+	       }else{
+               	   nameserver += ":53"
+	           isv6 = false
+	       }
                port = "53"
-            }
-	    
-	    if strings.Contains(host, ":") {
-	       isv6 = true
-	       fmt.Printf("host is ipv6[%v] nameserver[%v] isv6[%v]\n", host, nameserver, isv6)
-	    }else{
-	       isv6 = false
-	       fmt.Printf("host is NOT ipv6[%v] nameserver[%v] isv6[%v]\n", host, nameserver, isv6)
+
+            }else{
+	       if strings.Contains(host, ":") {
+	           isv6 = true
+	       }else{
+	           isv6 = false
+	       }
 	    }
 
-	    if isv6 {
- 	       fmt.Printf("isv6\n")
-	    }
-
-	    fmt.Printf("nameserver[%v] host[%v] port[%v]\n", nameserver, host, port)
+//	    fmt.Printf("nameserver[%v] host[%v] port[%v]\n", nameserver, host, port)
 	    for _, question := range config.Questions {
 
 	    	query, qtypestr, qtype_err := net.SplitHostPort(question)
@@ -73,7 +75,6 @@ func create(
 		       qtype = dns.TypeA
 		    }
 		}
-	        fmt.Printf("    query[%v] qtype[%v]\n", query, qtype)
 	    	jobs[index], err = newDNSMonitorHostJob(nameserver, host, port, isv6, query, qtype, &config)
 
 	    	if err != nil {

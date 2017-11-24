@@ -21,10 +21,10 @@ func newDNSMonitorHostJob(
 	typ := config.Name
 	qtypestr := dns.TypeToString[qtype]
 
-	jobName := fmt.Sprintf("%v@%v@%v@%v", typ, question, qtypestr, nameserver)
+	jobName := fmt.Sprintf("%v@%v@%v@%v", typ, nameserver, question, qtypestr)
 
-	fmt.Printf("newDNSMonitorHostJob: nameserver[%v] host[%v] port[%v] question[%v] qtype[%v]\n", nameserver, host, port, question, qtype)
-	
+//	fmt.Printf("newDNSMonitorHostJob: nameserver[%v] host[%v] port[%v] question[%v] qtype[%v]\n", nameserver, host, port, question, qtype)
+
 	fields := common.MapStr{
 		"nameserver":  nameserver,
 		"question": question,
@@ -44,7 +44,7 @@ func newDNSMonitorHostJob(
 }
 
 func execQuery(nameserver string, isv6 bool, question string, qtype uint16)(common.MapStr, reason.Reason){
-     fmt.Printf("beginning: in:nameserver[%v] question[%v] type[%v]\n", nameserver, question, qtype)
+//     fmt.Printf("beginning: in:nameserver[%v] isv6[%v] question[%v] type[%v]\n", nameserver, isv6, question, qtype)
      dns_msg := new(dns.Msg)
      dns_msg.Id = dns.Id()
      dns_msg.RecursionDesired = true
@@ -58,11 +58,6 @@ func execQuery(nameserver string, isv6 bool, question string, qtype uint16)(comm
      }
 
      in, rtt, err := dns_client.Exchange(dns_msg, nameserver)
-
-     fmt.Printf("nameserver:[%v]\n", nameserver)
-     fmt.Printf("in:[%v]\n", in)
-     fmt.Printf("rtt:[%v]\n", rtt)
-     fmt.Printf("err:[%v]\n\n", err)
 
      event := common.MapStr{
      	      "response": common.MapStr{
