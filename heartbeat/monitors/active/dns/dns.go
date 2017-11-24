@@ -25,11 +25,10 @@ func create(
 		return nil, err
 	}
 
-	var err error
-
 	jobs := make([]monitors.Job, len(config.Questions)*len(config.NameServers))
 
 	var (
+		err   error
 		index int
 		qtype uint16
 		isv6  bool
@@ -43,8 +42,8 @@ func create(
 		if port_err != nil {
 			host = nameserver
 			if strings.Contains(host, ":") {
-				isv6 = true
 				nameserver = "[" + nameserver + "]:53"
+				isv6 = true
 			} else {
 				nameserver += ":53"
 				isv6 = false
