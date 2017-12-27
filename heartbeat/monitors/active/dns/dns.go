@@ -7,7 +7,6 @@ import (
 	"github.com/miekg/dns"
 	"net"
 	"strings"
-	//	"fmt"
 )
 
 func init() {
@@ -37,28 +36,28 @@ func create(
 	for _, nameserver := range config.NameServers {
 
 		host, port, port_err := net.SplitHostPort(nameserver)
-		//	    fmt.Printf("host[%v] port[%v] port_err[%v]\n", host, port, port_err)
 
 		if port_err != nil {
 			host = nameserver
-			if strings.Contains(host, ":") {
-				nameserver = "[" + nameserver + "]:53"
-				isv6 = true
-			} else {
-				nameserver += ":53"
-				isv6 = false
+			IPAddr, rslv_err := net.ResolveIPAddr("ip", nameserver)
+
+			if rslv_err != nil {
+				continue
 			}
+			nameserver = IPAddr.String()
+			isv6 = isNsIPv6(nameserver)
 			port = "53"
 
 		} else {
-			if strings.Contains(host, ":") {
-				isv6 = true
-			} else {
-				isv6 = false
+			IPAddr, rslv_err := net.ResolveIPAddr("ip", host)
+
+			if rslv_err != nil {
+				continue
 			}
+			nameserver = IPAddr.String()
+			isv6 = isNsIPv6(nameserver)
 		}
 
-		//	    fmt.Printf("nameserver[%v] host[%v] port[%v]\n", nameserver, host, port)
 		for _, question := range config.Questions {
 
 			query, qtypestr, qtype_err := net.SplitHostPort(question)
@@ -74,6 +73,7 @@ func create(
 					qtype = dns.TypeA
 				}
 			}
+
 			jobs[index], err = newDNSMonitorHostJob(nameserver, host, port, isv6, query, qtype, &config)
 
 			if err != nil {
@@ -84,4 +84,12 @@ func create(
 	}
 
 	return jobs, nil
+}
+
+func isNsIPv6(nameserver string) bool {
+	if strings.Contains(nameserver, ":") {
+		return true
+	} else {
+		return false
+	}
 }
